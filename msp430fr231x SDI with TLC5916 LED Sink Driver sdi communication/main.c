@@ -232,9 +232,9 @@ int readErrorStatusCode (void) {
       // read Error Status Code
             while(i--)
              {
-                P1OUT ^= BIT5;                                 // CLK
+                P1OUT ^= BIT5;                                  // CLK
                 __delay_cycles(30);
-                P1OUT |= BIT1;                                  // LE active
+                P1OUT |= BIT1;                                   // LE active
                 __delay_cycles(30);
 
                 if ((P2OUT & 0x01) != 0 )
