@@ -18,7 +18,7 @@
 //******************************************************************************
 #include <msp430.h>
 
-
+unsigned int m=0;
 
 void setLED (unsigned int buffer, unsigned long duration)   // SetLED (LED output, duration) function
 
@@ -271,51 +271,74 @@ int main(void)
     P2DIR &= ~BIT0;                                           // P2.0 as input
     P2OUT |= BIT0;                                             // P2.0 as low
 
+    P2OUT |= BIT1;                          // Configure P2.1 as pulled-up
+    P2REN |= BIT1;                          // P2.1 pull-up register enable
+    P2IES |= BIT1;                          // P2.1 Hi/Low edge
+    P2IE |= BIT1;
+
+
+
     PM5CTL0 &= ~LOCKLPM5;                     // Disable the GPIO power-on default high-impedance mode
                                                                       // to activate previously configured port settings
+    P2IFG &= ~BIT1;                         // P2.1 IFG cleared
 
     setLED (0, 10);
 
     SetToSpecialMode();
     writeConfigurationCode(0b00000000);
     SetToNormalMode();
-//for (k=0; k<=0xff; k++){
-    setLED (0xff, 24000);
-//setLED (0, 10);
- //}
-__delay_cycles(240000);
-
-    SetToSpecialMode();
-       writeConfigurationCode(0b01000000);
-       SetToNormalMode();
-    //   for (k=0; k<=0xff; k++){
-           setLED (0xff, 24000);
- //      setLED (0, 10);
-   //     }
-       __delay_cycles(240000);
-
-       SetToSpecialMode();
-          writeConfigurationCode(0b01010000);
-          SetToNormalMode();
-  //        for (k=0; k<=0xff; k++){
-              setLED (0xff, 24000);
-   //       setLED (0, 10);
-   //        }
-          __delay_cycles(240000);
-
-    SetToSpecialMode();
-   writeConfigurationCode(0b01111111);
-   SetToNormalMode();
-   //  __bis_SR_register(LPM0_bits | GIE);       // Enter LPM0,enable interrupts
-   // __no_operation();                         // For debug,Remain in LPM0
-//   for (k=0; k<=0xff; k++){
-       setLED (0xff, 24000);
-//   setLED (0, 10);
-  //  }
-    __delay_cycles(240000);
-
-
+    for (k=1; k<=0xff; k*=2){
+    setLED (k, 1000);
     setLED (0, 10);
+    }
+// __delay_cycles(240000);
+ while (1)
+     {
+
+         __bis_SR_register(LPM3_bits | GIE);       // Enter LPM0,enable interrupts
+         __no_operation();   // For debug,Remain in LPM0
+         setLED (0xff, 1);
+
+
+         }
+}
+
+
+#pragma vector=PORT2_VECTOR
+__interrupt void Port_2(void)
+
+{
+    switch (m) {
+        case 0:
+        {
+            SetToSpecialMode();
+            writeConfigurationCode(0b00000000);
+            SetToNormalMode();
+            m=1;
+            }
+            break;
+        case 1:
+        {
+            SetToSpecialMode();
+            writeConfigurationCode(0b01000000);
+            SetToNormalMode();
+            m=2;
+            }
+            break;
+        case 2:
+        {
+            SetToSpecialMode();
+            writeConfigurationCode(0b01111111);
+            SetToNormalMode();
+            m=0;
+            }
+            break;
+        default:
+            break;
+    }
+
+    P2IFG &= ~BIT1;                         // Clear P2.1 IFG
+    __bic_SR_register_on_exit(LPM3_bits);   // Exit LPM3
 }
 
 
@@ -328,7 +351,7 @@ __delay_cycles(240000);
 #pragma vector=TIMER0_B0_VECTOR
 #pragma vector=TIMER0_B1_VECTOR
 #pragma vector=PORT1_VECTOR
-#pragma vector=PORT2_VECTOR
+// #pragma vector=PORT2_VECTOR
 #pragma vector=ECOMP0_VECTOR
 #pragma vector=ADC_VECTOR
 #pragma vector=EUSCI_B0_VECTOR
