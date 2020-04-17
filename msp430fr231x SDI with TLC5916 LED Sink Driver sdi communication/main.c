@@ -1,6 +1,23 @@
+//  MSP430FR2311 komunikacija sa Ti TLC5961  LED 8 kanalni sink drajver
+//  konstante struje 3mA do 120 mA po kanalu
+//  Dva radna moda: normalni i specijalni (detekcija greške i promena intenziteta struje diode)
+//  Implementirane funkcije:
+//  setLED (buffer, duration)
+//                   - buffer: 0b******** - pozicija bita pali jedan od 8 kanala
+//                   - duration: dužina trajanja sijanja LED kanala
+//  SetToNormalMode ()
+//                   - uvodi TLC5961 u normalni mod rada
+//  SetToSpecialMode ()
+//                   - uvodi TLC5961 u specijalni mod rada
+//  writeConfigurationCode (code)
+//                   - code: 0b******** -  CM|HC|CCO...CC7
+//                   - značenje koda definisano u TLC5916 Datasheetu
+//  readErrorStatusCode (code)
+//                   - code: ox**
+//                   - značenje koda definisano u TLC5916 Datasheetu
+//
 //  MSP430FR2311 - use sdi communication with TLC5916 LED Sink Driver
 //  2 working modes: Normal and Special( Error Detection and Current Gain)
-//
 //
 //                  MSP430FR2311
 //                -----------------
@@ -11,17 +28,22 @@
 //               |             P1.1|-> LE(ED1)
 //               |             P1.5|-> CLK
 //               |             P1.7|-> SDI
-//               |             P2.0|<- SDO
+//    BTN->|P2.1      P2.0|<- SDO
+//
+// OPIS: Klikom na prekidač BTN, MSP izlazi iz sleep moda i
+//           interapt rutinom menja intenzitet sijanja LED dioda
 //
 //
+//   magazinMehatronika @ nespojivo
 //   April 2020
 //******************************************************************************
 #include <msp430.h>
 
 unsigned int m=0;
 
-void setLED (unsigned int buffer, unsigned long duration)   // SetLED (LED output, duration) function
 
+
+void setLED (unsigned int buffer, unsigned long duration)   // SetLED (LED output, duration) function
 {
 unsigned int i;
         i=8;
@@ -36,58 +58,58 @@ unsigned int i;
                  P1OUT &= ~BIT7;
              }
              __delay_cycles(30);
-             P1OUT ^= BIT5;                                 // CLK
-                          __delay_cycles(30);
-            P1OUT ^= BIT5;
-                         __delay_cycles(30);
+             P1OUT ^= BIT5;                                   // CLK
+             __delay_cycles(30);
+             P1OUT ^= BIT5;
+             __delay_cycles(30);
         }
-               P1OUT ^= BIT1;                                 // LE active
-               __delay_cycles(30);
-                P1OUT ^= BIT1;
-                __delay_cycles(30);
-                P1OUT ^= BIT0;                              // OE active
-                while ((duration--)>0)
-                __delay_cycles(1);
-
+        P1OUT ^= BIT1;                                       // LE active
+        __delay_cycles(30);
+        P1OUT ^= BIT1;
+        __delay_cycles(30);
+        P1OUT ^= BIT0;                                      // OE active
+        while ((duration--)>0)
+        __delay_cycles(1);
 }
+
+
 
 void SetToNormalMode (void)
 {
-
-    P1OUT &= ~BIT5;                     // CLK to Low
+    P1OUT &= ~BIT5;                                     // CLK to Low
 
 // 1 clk
-    P1OUT &= ~BIT1;                                 // LE deactive
+    P1OUT &= ~BIT1;                                    // LE deactive
     __delay_cycles(30);
 
-    P1OUT |= BIT0;                              // OE active
+    P1OUT |= BIT0;                                      // OE active
     __delay_cycles(30);
 
-    P1OUT ^= BIT5;                                 // CLK
+    P1OUT ^= BIT5;                                     // CLK
     __delay_cycles(30);
     P1OUT ^= BIT5;
     __delay_cycles(30);
 
 // 2 clk
-    P1OUT &= ~BIT0;                              // OE deactive
+    P1OUT &= ~BIT0;                                 // OE deactive
     __delay_cycles(30);
 
-    P1OUT ^= BIT5;                                 // CLK
+    P1OUT ^= BIT5;                                   // CLK
     __delay_cycles(30);
     P1OUT ^= BIT5;
     __delay_cycles(30);
 
 // 3 clk
-        P1OUT |= BIT0;                              // OE active
+        P1OUT |= BIT0;                               // OE active
         __delay_cycles(30);
 
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                              // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
 
 // 4 clk
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                              // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
@@ -101,6 +123,8 @@ void SetToNormalMode (void)
 
     }
 
+
+
 void SetToSpecialMode (void)
 {
     P1OUT &= ~BIT5;
@@ -109,10 +133,10 @@ void SetToSpecialMode (void)
     P1OUT &= ~BIT1;                                 // LE deactive
     __delay_cycles(30);
 
-    P1OUT |= BIT0;                              // OE active
+    P1OUT |= BIT0;                                   // OE active
     __delay_cycles(30);
 
-    P1OUT ^= BIT5;                                 // CLK
+    P1OUT ^= BIT5;                                  // CLK
     __delay_cycles(30);
     P1OUT ^= BIT5;
     __delay_cycles(30);
@@ -130,22 +154,22 @@ void SetToSpecialMode (void)
         P1OUT |= BIT0;                              // OE active
         __delay_cycles(30);
 
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                             // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
 
 // 4 clk
-        P1OUT |= BIT1;                                 // LE active
+        P1OUT |= BIT1;                              // LE active
         __delay_cycles(30);
 
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                              // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
 
 // 5 clk
-        P1OUT &= ~BIT1;                                 // LE deactive
+        P1OUT &= ~BIT1;                            // LE deactive
         __delay_cycles(30);
 
       P1OUT ^= BIT5;                                 // CLK
@@ -155,19 +179,18 @@ void SetToSpecialMode (void)
 
     }
 
+
+
 void writeConfigurationCode (unsigned int code)   // writeConfigurationCode (code=CM|HC|CC0...CC5) function
 {
 
     P1OUT &= ~BIT5;
 
     unsigned int i;
-
-
         i=8;
-
-        P1OUT &= ~BIT1;                                 // LE deactive
+        P1OUT &= ~BIT1;                                  // LE deactive
         __delay_cycles(30);
-        P1OUT |= BIT0;                              // OE active
+        P1OUT |= BIT0;                                     // OE active
         __delay_cycles(30);
 
         while(i--)
@@ -182,48 +205,45 @@ void writeConfigurationCode (unsigned int code)   // writeConfigurationCode (cod
              }
              __delay_cycles(30);
              P1OUT ^= BIT5;                                 // CLK
-                          __delay_cycles(30);
+             __delay_cycles(30);
             P1OUT ^= BIT5;
-                         __delay_cycles(30);
-            if (i == 1) {P1OUT |= BIT1; }                                  // LE active
-
+            __delay_cycles(30);
+            if (i == 1) {P1OUT |= BIT1; }                // LE active
         }
 
-
-        P1OUT &= ~BIT1;                                 // LE deactive
-                __delay_cycles(30);
+        P1OUT &= ~BIT1;                                  // LE deactive
+        __delay_cycles(30);
 }
+
 
 
 int readErrorStatusCode (void) {
 
     unsigned int i=8;
-    unsigned int c=0x00;
     unsigned int code=0x00;
 
-    P1OUT &= ~BIT5;                         // CLK low
-    P1OUT &= ~BIT1;                                 // LE deactive
+    P1OUT &= ~BIT5;                          // CLK low
+    P1OUT &= ~BIT1;                          // LE deactive
     __delay_cycles(30);
     P1OUT |= BIT0;                              // OE active
     __delay_cycles(30);
 
-
     // 1 clk
-    P1OUT &= ~BIT0;                              // OE deactive
+    P1OUT &= ~BIT0;                          // OE deactive
     __delay_cycles(30);
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                         // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
 
     // 2 clk
-        P1OUT ^= BIT5;                                 // CLK
+        P1OUT ^= BIT5;                         // CLK
         __delay_cycles(30);
         P1OUT ^= BIT5;
         __delay_cycles(30);
 
     // 3 clk
-            P1OUT ^= BIT5;                                 // CLK
+            P1OUT ^= BIT5;                      // CLK
             __delay_cycles(30);
             P1OUT ^= BIT5;
             __delay_cycles(30);
@@ -232,9 +252,9 @@ int readErrorStatusCode (void) {
       // read Error Status Code
             while(i--)
              {
-                P1OUT ^= BIT5;                                  // CLK
+                P1OUT ^= BIT5;                     // CLK
                 __delay_cycles(30);
-                P1OUT |= BIT1;                                   // LE active
+                P1OUT |= BIT1;                      // LE active
                 __delay_cycles(30);
 
                 if ((P2OUT & 0x01) != 0 )
@@ -246,15 +266,11 @@ int readErrorStatusCode (void) {
                       code &= !(0x01<<i) ;
                   }
                   __delay_cycles(30);
-                  P1OUT ^= BIT5;                                 // CLK
-                    __delay_cycles(30);
-
-
+                  P1OUT ^= BIT5;                     // CLK
+                  __delay_cycles(30);
              }
-
     return(code);
 }
-
 
 
 
@@ -262,25 +278,23 @@ int main(void)
 {
     unsigned int k = 0;
 
-    WDTCTL = WDTPW | WDTHOLD;                 // Stop watchdog timer
+    WDTCTL = WDTPW | WDTHOLD;                // Stop watchdog timer
 
-    P1DIR |= BIT7 | BIT5 | BIT1 | BIT0;              // P1.0, 1.1, 1.5 & 1.7 as out
+    P1DIR |= BIT7 | BIT5 | BIT1 | BIT0;                  // P1.0, 1.1, 1.5 & 1.7 as out
     P1OUT &= ~BIT7 | BIT5 | BIT1;                       // P1.1, P1.5 & 1.7 low
-    P1OUT |= BIT0;                                                 // P1.0 high
+    P1OUT |= BIT0;                                                // P1.0 high
 
-    P2DIR &= ~BIT0;                                           // P2.0 as input
-    P2OUT |= BIT0;                                             // P2.0 as low
+    P2DIR &= ~BIT0;                                             // P2.0 as input
+    P2OUT |= BIT0;                                               // P2.0 as low
 
-    P2OUT |= BIT1;                          // Configure P2.1 as pulled-up
-    P2REN |= BIT1;                          // P2.1 pull-up register enable
-    P2IES |= BIT1;                          // P2.1 Hi/Low edge
+    P2OUT |= BIT1;                                              // Configure P2.1 as pulled-up
+    P2REN |= BIT1;                                              // P2.1 pull-up register enable
+    P2IES |= BIT1;                                                // P2.1 Hi/Low edge
     P2IE |= BIT1;
 
-
-
-    PM5CTL0 &= ~LOCKLPM5;                     // Disable the GPIO power-on default high-impedance mode
-                                                                      // to activate previously configured port settings
-    P2IFG &= ~BIT1;                         // P2.1 IFG cleared
+    PM5CTL0 &= ~LOCKLPM5;                          // Disable the GPIO power-on default high-impedance mode
+                                                                           // to activate previously configured port settings
+    P2IFG &= ~BIT1;                                           // P2.1 IFG cleared
 
     setLED (0, 10);
 
@@ -288,20 +302,18 @@ int main(void)
     writeConfigurationCode(0b00000000);
     SetToNormalMode();
     for (k=1; k<=0xff; k*=2){
-    setLED (k, 1000);
-    setLED (0, 10);
+        setLED (k, 1000);
+        setLED (0, 10);
     }
-// __delay_cycles(240000);
+
  while (1)
      {
-
-         __bis_SR_register(LPM3_bits | GIE);       // Enter LPM0,enable interrupts
-         __no_operation();   // For debug,Remain in LPM0
+         __bis_SR_register(LPM3_bits | GIE);   // Enter LPM0,enable interrupts
+         __no_operation();                                  // For debug,Remain in LPM0
          setLED (0xff, 1);
-
-
          }
 }
+
 
 
 #pragma vector=PORT2_VECTOR
@@ -337,7 +349,7 @@ __interrupt void Port_2(void)
             break;
     }
 
-    P2IFG &= ~BIT1;                         // Clear P2.1 IFG
+    P2IFG &= ~BIT1;                                            // Clear P2.1 IFG
     __bic_SR_register_on_exit(LPM3_bits);   // Exit LPM3
 }
 
